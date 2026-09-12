@@ -19,11 +19,5 @@ db = firestore.client() if firebase_admin._apps else None
 def index():
     return render_template('index.html')
 
-@app.route('/api/data')
-def get_data():
-    if not db:
-        return jsonify({"error": "Database not connected"}), 500
-    return jsonify({"status": "connected"})
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
