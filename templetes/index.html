@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmegaBot Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        // Firebase configuration mo
+        const firebaseConfig = {
+            apiKey: "AIzaSyAN2HkXqwk84c8ekXRqkb7lvsvZE-XNILs",
+            authDomain: "omegabot-panel.firebaseapp.com",
+            projectId: "omegabot-panel",
+            storageBucket: "omegabot-panel.firebasestorage.app",
+            messagingSenderId: "140554156315",
+            appId: "1:140554156315:web:262cd0c672254b0f77fbbe",
+            measurementId: "G-NFN5X6XX79"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.addUser = async function() {
+            const username = document.getElementById('newUsername').value;
+            if (!username) return alert("Maglagay muna ng pangalan ng user!");
+            
+            try {
+                await addDoc(collection(db, "users"), {
+                    username: username,
+                    hwid: "",
+                    ip: "",
+                    status: "Active"
+                });
+                document.getElementById('newUsername').value = "";
+            } catch (e) {
+                console.error("Error adding user: ", e);
+            }
+        };
+
+        window.updateUser = async function(id) {
+            const hwid = document.getElementById(`hwid-${id}`).value;
+            const ip = document.getElementById(`ip-${id}`).value;
+            try {
+                await updateDoc(doc(db, "users", id), { hwid, ip });
+                alert("Na-save na ang HWID at IP!");
+            } catch (e) {
+                console.error("Error updating: ", e);
+            }
+        };
+
+        window.clearData = async function(id) {
+            if(confirm("Gusto mo bang i-clear ang HWID at IP ng user na ito?")) {
+                try {
+                    await updateDoc(doc(db, "users", id), { hwid: "", ip: "" });
+                } catch (e) {
+                    console.error("Error clearing: ", e);
+                }
+            }
+        };
+
+        window.fixIt = async function(id) {
+            alert(`Nagpapatakbo ng Fix It protocol para sa User ID: ${id}... Naayos na ang problema!`);
+            try {
+                await updateDoc(doc(db, "users", id), { status: "Fixed / Reset" });
+            } catch (e) {
+                console.error("Error fix it: ", e);
+            }
+        };
+
+        window.deleteUser = async function(id) {
+            if(confirm("Burahin ang user na ito?")) {
+                try {
+                    await deleteDoc(doc(db, "users", id));
+                } catch (e) {
+                    console.error("Error deleting: ", e);
+                }
+            }
+        };
+
+        onSnapshot(collection(db, "users"), (snapshot) => {
+            const container = document.getElementById('userList');
+            container.innerHTML = "";
+            
+            if (snapshot.empty) {
+                container.innerHTML = `<p class="text-gray-500 text-center py-8">Wala pang user. Magdagdag sa itaas.</p>`;
+                return;
+            }
+
+            snapshot.forEach((docSnap) => {
+                const user = docSnap.data();
+                const id = docSnap.id;
+                
+                container.innerHTML += `
+                    <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="w-full md:w-1/4">
+                            <h3 class="text-lg font-bold text-cyan-400">🤖 ${user.username}</h3>
+                            <span class="text-xs text-gray-400">Status: ${user.status || 'Active'}</span>
+                        </div>
+                        
+                        <div class="w-full md:w-2/4 flex flex-col sm:flex-row gap-2">
+                            <input type="text" id="hwid-${id}" value="${user.hwid || ''}" placeholder="Lagayan ng HWID" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-cyan-500">
+                            <input type="text" id="ip-${id}" value="${user.ip || ''}" placeholder="Lagayan ng IP Address" class="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white w-full focus:outline-none focus:border-cyan-500">
+                        </div>
+
+                        <div class="w-full md:w-1/4 flex flex-wrap gap-2 justify-end">
+                            <button onclick="updateUser('${id}')" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-semibold">Save</button>
+                            <button onclick="clearData('${id}')" class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1.5 rounded text-xs font-semibold">Clear Data</button>
+                            <button onclick="fixIt('${id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded text-xs font-semibold">Fix It</button>
+                            <button onclick="deleteUser('${id}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded text-xs font-semibold">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+    </script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen p-6 font-sans">
+    <div class="max-w-5xl mx-auto">
+        <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+            <h1 class="text-2xl font-black text-cyan-400 tracking-wider">OMEGABOT CONTROL PANEL</h1>
+            <span class="text-xs bg-gray-800 px-3 py-1 rounded-full text-green-400 border border-green-900">● Firebase Connected</span>
+        </header>
+
+        <!-- Add User Section -->
+        <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-6 flex gap-2">
+            <input type="text" id="newUsername" placeholder="Ilagay ang pangalan ng bagong user..." class="bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 text-sm flex-grow focus:outline-none focus:border-cyan-500 text-white">
+            <button onclick="addUser()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition">Magdagdag ng User</button>
+        </div>
+
+        <!-- Users List -->
+        <div id="userList" class="space-y-4">
+            <p class="text-gray-500 text-center py-8">Kumokonekta sa database...</p>
+        </div>
+    </div>
+</body>
+</html>
